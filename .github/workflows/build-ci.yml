@@ -15,6 +15,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    - name: Cache Trivy DB
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/trivy
+        key: trivy-db-cache-${{ github.ref_name }}
+        restore-keys: |
+          trivy-db-cache-
     - name: Install Trivy
       run: |
         sudo apt-get update
@@ -34,14 +41,10 @@ jobs:
 
     - name: Set Docker Image Tag
       run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV
-    
-    # - name: Run and Send Trivy to Webhook
-    #   run: |
-    #     trivy image --format json --output trivy-scan.json rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}
 
     - name: Run and Send Trivy to Webhook
       run: |
-        trivy image --insecure --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
+        trivy image --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
         titleMsg="Vulnerability Scan Result for $DOCKER_IMAGE_TAG"
         vulnJQ=$(jq -r '.Results[] | select(.Vulnerabilities != null) | .Target + ": " + (.Vulnerabilities[] | .VulnerabilityID + " " + .Severity)' trivy-scan.json)
         PAYLOAD=$(jq -n --arg title "$titleMsg" --arg text "$vulnJQ" \
