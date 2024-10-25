@@ -27,23 +27,6 @@ jobs:
     - name: Run tests
       run: npm test
 
-    - name: Cache Trivy DB
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/trivy
-        key: trivy-db-cache-${{ github.ref_name }}
-        restore-keys: |
-          trivy-db-cache-
-
-    - name: Install Trivy
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y apt-transport-https gnupg lsb-release software-properties-common
-        curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update
-        sudo apt-get install trivy
-
     - name: downcase REPO
       run: echo "REPO=${{github.event.repository.name}}" >>${GITHUB_ENV}
 
@@ -55,20 +38,5 @@ jobs:
 
     - name: Set Docker Image Tag
       run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV
-
-    - name: Run and Send Trivy to Webhook
-      run: |
-        trivy image --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
-        titleMsg="Vulnerability Scan Result for $DOCKER_IMAGE_TAG"
-        vulnJQ=$(jq -r '.Results[] | select(.Vulnerabilities != null) | .Target + ": " + (.Vulnerabilities[] | .VulnerabilityID + " " + .Severity)' trivy-scan.json)
-        PAYLOAD=$(jq -n --arg title "$titleMsg" --arg text "$vulnJQ" \
-          '{
-            "@type": "MessageCard",
-            "@context": "http://schema.org/extensions",
-            "summary": $title,
-            "sections": [{"activityTitle": $title, "text": $text}]
-          }')
-        echo "$PAYLOAD"
-        curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" https://aidalinfo.webhook.office.com/webhookb2/8fbe6f13-b576-4e4a-9a41-faf383791f06@4b38adef-4ec6-49ab-a639-261c6300122b/IncomingWebhook/446a0ec1c76d419f96fbc53f945cfee1/4fddf9f5-cb9a-44c3-9b2d-bc716b0f2009/V2HSV4hF9s9y4FsLh1mZ8p8Vf1-FkmvKYuHNRDeT5UNqg1
 
     - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
