@@ -1,0 +1,21 @@
+name: BUILD RELEASE AND PUSH
+
+on:
+  push:
+    tags: [ "v**" ]
+  pull_request:
+    tags: [ "v**" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: downcase REPO
+      run: echo "REPO=${{github.event.repository.name}}" >>${GITHUB_ENV}
+    - name: Build the Docker image
+      env:
+        SCW_SECRET:  ${{ secrets.SCW_SECRET }}
+      run: docker login rg.fr-par.scw.cloud/namespace-great-wilson -u nologin -p "$SCW_SECRET"
+    - run: docker build . --file Dockerfile --tag "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
+    - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
