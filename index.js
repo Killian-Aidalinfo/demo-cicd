@@ -24,7 +24,7 @@ function startServer() {
 }
 
 // Exporter les fonctions et `value` sans démarrer le serveur
-module.exports = { responseCalculate, startServer, getValue: () => value, resetValue: () => { value = 1 } };
+module.exports = { responseCalculate, startServer, getValue: () => value };
 
 // Démarrer le serveur uniquement si ce fichier est exécuté directement
 if (require.main === module) {

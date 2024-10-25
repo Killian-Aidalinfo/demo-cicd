@@ -1,9 +1,4 @@
-const { responseCalculate, getValue, resetValue } = require('./index');
-
-beforeEach(() => {
-  resetValue(); 
-});
-
+const { responseCalculate, getValue } = require('./index');
 
 const resultNeeded = 2;
 
