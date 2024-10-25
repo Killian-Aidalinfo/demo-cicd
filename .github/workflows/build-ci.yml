@@ -15,6 +15,14 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y apt-transport-https gnupg lsb-release software-properties-common
+        curl -fsSL https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
     - name: downcase REPO
       run: echo "REPO=${{github.event.repository.name}}" >>${GITHUB_ENV}
     - name: Build the Docker image
@@ -23,23 +31,23 @@ jobs:
       run: docker login rg.fr-par.scw.cloud/namespace-great-wilson -u nologin -p "$SCW_SECRET"
     - run: docker build . --file Dockerfile --tag "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
     - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
-    - name: Scan image in a private registry
-      uses: aquasecurity/trivy-action@0.28.0
-      with:
-        image-ref: rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}
-        scan-type: image
-        format: 'github'
-        output: 'dependency-results.sbom.json'
-        github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
-        severity: "MEDIUM,HIGH,CRITICAL"
-        scanners: "vuln"
-      env: 
-        TRIVY_USERNAME: "nologin"
-        TRIVY_PASSWORD: ${{ secrets.SCW_SECRET }}
 
-    - name: Upload trivy report as a Github artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: trivy-sbom-report
-        path: '${{ github.workspace }}/dependency-results.sbom.json'
-        retention-days: 20
+    - name: Run and Send Trivy to Webhook
+      run: |
+        trivy image --format json --output trivy-scan.json rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}
+
+    - name: Run and Send Trivy to Webhook
+      run: |
+        trivy image --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
+        titleMsg="Vulnerability Scan Result for $DOCKER_IMAGE_TAG"
+        vulnJQ=$(jq -r '.Results[] | if .Vulnerabilities then .Target + ": " + (.Vulnerabilities[] | .VulnerabilityID + " " + .Severity) else .Target + ": Aucune vulnérabilitée trouvée dans l image ! 🚀🚀" end' trivy-scan.json)
+        PAYLOAD=$(jq -n --arg title "$titleMsg" --arg text "$vulnJQ" \
+          '{
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "summary": $title,
+            "sections": [{"activityTitle": $title, "text": $text}]
+          }')
+        echo "$PAYLOAD"
+        curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" https://aidalinfo.webhook.office.com/webhookb2/8fbe6f13-b576-4e4a-9a41-faf383791f06@4b38adef-4ec6-49ab-a639-261c6300122b/IncomingWebhook/446a0ec1c76d419f96fbc53f945cfee1/4fddf9f5-cb9a-44c3-9b2d-bc716b0f2009/V2HSV4hF9s9y4FsLh1mZ8p8Vf1-FkmvKYuHNRDeT5UNqg1
+
