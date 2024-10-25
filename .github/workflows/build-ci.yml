@@ -33,7 +33,7 @@ jobs:
     - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
 
     - name: Set Docker Image Tag
-      run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV
+      run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV
     
     # - name: Run and Send Trivy to Webhook
     #   run: |
