@@ -41,7 +41,7 @@ jobs:
 
     - name: Run and Send Trivy to Webhook
       run: |
-        trivy image --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
+        trivy image --insecure --format json --output trivy-scan.json $DOCKER_IMAGE_TAG
         titleMsg="Vulnerability Scan Result for $DOCKER_IMAGE_TAG"
         vulnJQ=$(jq -r '.Results[] | select(.Vulnerabilities != null) | .Target + ": " + (.Vulnerabilities[] | .VulnerabilityID + " " + .Severity)' trivy-scan.json)
         PAYLOAD=$(jq -n --arg title "$titleMsg" --arg text "$vulnJQ" \
