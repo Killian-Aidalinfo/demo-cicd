@@ -6,11 +6,15 @@ on:
   pull_request:
     tags: [ "v**" ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: downcase REPO
       run: echo "REPO=${{github.event.repository.name}}" >>${GITHUB_ENV}
     - name: Build the Docker image
@@ -19,3 +23,23 @@ jobs:
       run: docker login rg.fr-par.scw.cloud/namespace-great-wilson -u nologin -p "$SCW_SECRET"
     - run: docker build . --file Dockerfile --tag "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
     - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
+    - name: Scan image in a private registry
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}
+        scan-type: image
+        format: 'github'
+        output: 'dependency-results.sbom.json'
+        github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
+        severity: "MEDIUM,HIGH,CRITICAL"
+        scanners: "vuln"
+      env: 
+        TRIVY_USERNAME: "nologin"
+        TRIVY_PASSWORD: ${{ secrets.SCW_SECRET }}
+
+    - name: Upload trivy report as a Github artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-sbom-report
+        path: '${{ github.workspace }}/dependency-results.sbom.json'
+        retention-days: 20
