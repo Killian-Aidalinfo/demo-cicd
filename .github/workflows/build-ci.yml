@@ -30,7 +30,7 @@ jobs:
         SCW_SECRET:  ${{ secrets.SCW_SECRET }}
       run: docker login rg.fr-par.scw.cloud/namespace-great-wilson -u nologin -p "$SCW_SECRET"
     - run: docker build . --file Dockerfile --tag "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
-    - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
+
 
     - name: Set Docker Image Tag
       run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV
@@ -54,3 +54,4 @@ jobs:
         echo "$PAYLOAD"
         curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" https://aidalinfo.webhook.office.com/webhookb2/8fbe6f13-b576-4e4a-9a41-faf383791f06@4b38adef-4ec6-49ab-a639-261c6300122b/IncomingWebhook/446a0ec1c76d419f96fbc53f945cfee1/4fddf9f5-cb9a-44c3-9b2d-bc716b0f2009/V2HSV4hF9s9y4FsLh1mZ8p8Vf1-FkmvKYuHNRDeT5UNqg1
 
+    - run: docker push "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
