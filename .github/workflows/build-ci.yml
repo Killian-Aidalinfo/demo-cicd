@@ -2,9 +2,9 @@ name: BUILD RELEASE AND PUSH
 
 on:
   push:
-    tags: [ "v**" ]
+    tags: ["v**"]
   pull_request:
-    tags: [ "v**" ]
+    tags: ["v**"]
 
 permissions:
   contents: write
@@ -15,6 +15,18 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20' 
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
     - name: Cache Trivy DB
       uses: actions/cache@v4
       with:
@@ -22,6 +34,7 @@ jobs:
         key: trivy-db-cache-${{ github.ref_name }}
         restore-keys: |
           trivy-db-cache-
+
     - name: Install Trivy
       run: |
         sudo apt-get update
@@ -30,14 +43,15 @@ jobs:
         echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
         sudo apt-get update
         sudo apt-get install trivy
+
     - name: downcase REPO
       run: echo "REPO=${{github.event.repository.name}}" >>${GITHUB_ENV}
+
     - name: Build the Docker image
       env:
-        SCW_SECRET:  ${{ secrets.SCW_SECRET }}
+        SCW_SECRET: ${{ secrets.SCW_SECRET }}
       run: docker login rg.fr-par.scw.cloud/namespace-great-wilson -u nologin -p "$SCW_SECRET"
     - run: docker build . --file Dockerfile --tag "rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}"
-
 
     - name: Set Docker Image Tag
       run: echo "DOCKER_IMAGE_TAG=rg.fr-par.scw.cloud/namespace-great-wilson/${REPO,,}:${GITHUB_REF##*/v}" >> $GITHUB_ENV

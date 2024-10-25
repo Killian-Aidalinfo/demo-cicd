@@ -1,19 +1,32 @@
-import Fastify from 'fastify';
-
-const fastify = Fastify({ logger: true });
-
-fastify.get('/', async () => {
-  return { message: 'Hello, world!' };
+const fastify = require('fastify')({
+  logger: true
 });
 
-const start = async () => {
-  try {
-    await fastify.listen({ port: 3000 });
-    console.log('Server démarré sur http://localhost:3000');
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-};
+let value = 1;
 
-start();
+function responseCalculate() {
+  value = value + 1;
+}
+
+function startServer() {
+  fastify.get('/', async () => {
+    responseCalculate();
+    return { message: value };
+  });
+
+  fastify.listen({ port: 3000 }, function (err, address) {
+    if (err) {
+      fastify.log.error(err);
+      process.exit(1);
+    }
+    console.log(`Serveur démarré sur ${address}`);
+  });
+}
+
+// Exporter les fonctions et `value` sans démarrer le serveur
+module.exports = { responseCalculate, startServer, getValue: () => value, resetValue: () => { value = 1 } };
+
+// Démarrer le serveur uniquement si ce fichier est exécuté directement
+if (require.main === module) {
+  startServer();
+}
